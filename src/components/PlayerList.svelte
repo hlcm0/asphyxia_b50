@@ -4,8 +4,7 @@
   export let players: PlayerSummary[] = [];
   export let selectedRefid = "";
   export let isBusy = false;
-  export let selectPlayer: (refid: string) => void;
-  export let generateB50: () => void | Promise<void>;
+  export let selectPlayer: (refid: string) => void | Promise<void>;
 </script>
 
 <section class="panel">
@@ -16,6 +15,7 @@
         <label class:selected={selectedRefid === player.refid} class="player-row">
           <input
             checked={selectedRefid === player.refid}
+            disabled={isBusy}
             name="selected-player"
             type="radio"
             value={player.refid}
@@ -28,9 +28,6 @@
         </label>
       {/each}
     </div>
-    <button class="primary" type="button" disabled={isBusy || !selectedRefid} on:click={generateB50}>
-      Generate B50
-    </button>
   {:else}
     <p class="muted">Scan folders to list SDVX 7 profiles.</p>
   {/if}

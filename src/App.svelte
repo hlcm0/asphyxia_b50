@@ -28,9 +28,11 @@
   let message = "";
   let isBusy = false;
   let isExporting = false;
+  let isUploading = false;
   let backgroundImageUrl = "";
   let exportColumns = 5;
   let backgroundLoadId = 0;
+  let generateRequestId = 0;
 
   onMount(async () => {
     try {
@@ -97,8 +99,12 @@
     await persistSettings();
   }
 
-  function selectPlayer(refid: string) {
+  async function selectPlayer(refid: string) {
+    if (isBusy || selectedRefid === refid) {
+      return;
+    }
     selectedRefid = refid;
+    await generateB50();
   }
 
   function resetResults() {
@@ -125,6 +131,9 @@
         ? `Found ${players.length} SDVX 7 player profile${players.length > 1 ? "s" : ""}.`
         : "No SDVX 7 player with score data was found.";
       await persistSettings();
+      if (selectedRefid) {
+        await generateB50();
+      }
     } catch (error) {
       message = String(error);
       players = [];
@@ -140,20 +149,25 @@
       return;
     }
 
+    const requestId = ++generateRequestId;
+    const refid = selectedRefid;
     isBusy = true;
     b50 = null;
     message = "";
     try {
-      b50 = await generateB50Data(dataDir, savedataDir, selectedRefid);
-      message = `Generated ${b50.cards.length} cards for ${b50.player.name}.`;
-      const uploadMessage = await uploadB50IfConfigured(b50);
-      if (uploadMessage) {
-        message = `${message} ${uploadMessage}`;
+      const result = await generateB50Data(dataDir, savedataDir, refid);
+      if (requestId === generateRequestId) {
+        b50 = result;
+        message = `Generated ${result.cards.length} cards for ${result.player.name}.`;
       }
     } catch (error) {
-      message = String(error);
+      if (requestId === generateRequestId) {
+        message = String(error);
+      }
     } finally {
-      isBusy = false;
+      if (requestId === generateRequestId) {
+        isBusy = false;
+      }
     }
   }
 
@@ -212,9 +226,24 @@
     await persistSettings();
   }
 
+  async function uploadB50ToCloud() {
+    if (!b50) {
+      message = "Generate a B50 preview first.";
+      return;
+    }
+
+    isUploading = true;
+    message = "";
+    try {
+      message = await uploadB50IfConfigured(b50);
+    } finally {
+      isUploading = false;
+    }
+  }
+
   async function uploadB50IfConfigured(result: B50Result) {
     if (!uploadServerUrl && !uploadQq) {
-      return "";
+      return "Cloud upload skipped: server address and QQ number are both required.";
     }
     if (!uploadServerUrl || !uploadQq) {
       return "Cloud upload skipped: server address and QQ number are both required.";
@@ -317,6 +346,7 @@
       {message}
       {isBusy}
       {isExporting}
+      {isUploading}
       {chooseDataDir}
       {chooseSavedataDir}
       {chooseBackgroundImage}
@@ -324,8 +354,8 @@
       {updateUploadServerUrl}
       {updateUploadQq}
       {scanInputs}
-      {generateB50}
       {exportPng}
+      {uploadB50ToCloud}
       {selectPlayer}
     />
 

@@ -78,6 +78,10 @@
   opacity: 0.65;
 }
 
+.panel-action {
+  margin-top: 8px;
+}
+
 .muted {
   color: var(--sidebar-text-muted);
   font-size: 12px;
