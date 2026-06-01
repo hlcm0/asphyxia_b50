@@ -12,6 +12,8 @@
   "app": {
     "windows": [
       {
+        "label": "main",
+        "create": false,
         "title": "SDVX B50 Tool",
         "width": 1280,
         "height": 860,

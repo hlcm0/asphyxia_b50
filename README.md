@@ -75,6 +75,26 @@ Tag names should use the `vX.Y.Z` format.
 
 Rust/Cargo is required to build. End users only need the generated executable and the system WebView2 Runtime, which is normally present on Windows 10/11.
 
+### Windows WebView2 data directory error
+
+If Windows shows "Microsoft Edge cannot read and write to its data directory"
+for a path like:
+
+```text
+C:\Users\<user>\AppData\Local\net.local.sdvx-b50-tool\EBWebView
+```
+
+close all running copies of the app and rename or delete:
+
+```text
+C:\Users\<user>\AppData\Local\net.local.sdvx-b50-tool
+```
+
+This folder only contains WebView2 cache/storage, not game data or exported B50
+images. Newer builds probe the WebView2 data directory before creating the
+window, and fall back to a writable temporary directory when the normal local
+app data path is unavailable.
+
 ## Supported Data
 
 - Game data folder: `contents/data`
