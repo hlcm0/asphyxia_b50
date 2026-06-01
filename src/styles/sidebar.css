@@ -39,6 +39,17 @@
   margin-bottom: 12px;
 }
 
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.input-field:last-child {
+  margin-bottom: 0;
+}
+
 .path-label {
   color: var(--sidebar-text-secondary);
   font-size: 10px;
@@ -83,6 +94,39 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.text-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  color: var(--sidebar-text-primary);
+  background: var(--sidebar-input-bg);
+  border: 1px solid var(--sidebar-input-border);
+  border-radius: var(--radius-default);
+  font-size: 12px;
+  line-height: 18px;
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.text-input:hover:not(:disabled) {
+  border-color: var(--sidebar-input-hover-border);
+  background: #141720;
+}
+
+.text-input:focus {
+  border-color: var(--color-primary);
+}
+
+.text-input:disabled {
+  color: var(--sidebar-text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.text-input::placeholder {
+  color: var(--sidebar-text-muted);
 }
 
 .player-list {

@@ -33,12 +33,16 @@ pub(crate) fn save_settings(
     data_dir: String,
     savedata_dir: String,
     background_image: String,
+    upload_server_url: String,
+    upload_qq: String,
 ) -> Result<(), String> {
     let path = settings_path()?;
     let settings = AppSettings {
         data_dir,
         savedata_dir,
         background_image,
+        upload_server_url,
+        upload_qq,
     };
     let content = serde_json::to_string_pretty(&settings)
         .map_err(|err| format!("Failed to serialize settings: {err}"))?;
@@ -87,6 +91,8 @@ fn discover_default_paths(base_dir: &Path) -> AppSettings {
         data_dir,
         savedata_dir,
         background_image: String::new(),
+        upload_server_url: String::new(),
+        upload_qq: String::new(),
     }
 }
 

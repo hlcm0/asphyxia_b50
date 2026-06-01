@@ -4,7 +4,7 @@ use std::path::PathBuf;
 pub(crate) const SDVX_DB_FILE: &str = "sdvx@asphyxia.db";
 pub(crate) const SDVX_VERSION: u64 = 7;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PlayerSummary {
     pub(crate) refid: String,
@@ -27,9 +27,13 @@ pub(crate) struct AppSettings {
     pub(crate) savedata_dir: String,
     #[serde(default)]
     pub(crate) background_image: String,
+    #[serde(default)]
+    pub(crate) upload_server_url: String,
+    #[serde(default)]
+    pub(crate) upload_qq: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct B50Result {
     pub(crate) version: u64,
@@ -39,7 +43,7 @@ pub(crate) struct B50Result {
     pub(crate) cards: Vec<B50Card>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct B50Card {
     pub(crate) rank: usize,
@@ -51,6 +55,13 @@ pub(crate) struct B50Card {
     pub(crate) clear_lamp: String,
     pub(crate) single_vf: String,
     pub(crate) jacket_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct UploadB50Result {
+    pub(crate) ok: bool,
+    pub(crate) message: String,
 }
 
 #[derive(Debug, Clone)]

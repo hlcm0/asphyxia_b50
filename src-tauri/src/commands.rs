@@ -1,7 +1,7 @@
 use crate::jacket::{placeholder_data_url, scan_jackets, select_jacket_data_url};
 use crate::models::{
     AppSettings, B50Card, B50Result, GenerateArgs, PlayerSummary, ScanArgs, ScanResult,
-    SDVX_VERSION,
+    UploadB50Result, SDVX_VERSION,
 };
 use crate::music_db::{parse_music_db, validate_data_dir};
 use crate::savedata::{
@@ -12,8 +12,10 @@ use crate::settings;
 use crate::volforce::{clear_lamp, difficulty_label, format_level, format_single_vf, generated_at};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
+use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 #[tauri::command]
 pub(crate) fn scan_inputs(data_dir: String, savedata_dir: String) -> Result<ScanResult, String> {
@@ -82,8 +84,25 @@ pub(crate) fn save_settings(
     data_dir: String,
     savedata_dir: String,
     background_image: String,
+    upload_server_url: String,
+    upload_qq: String,
 ) -> Result<(), String> {
-    settings::save_settings(data_dir, savedata_dir, background_image)
+    settings::save_settings(
+        data_dir,
+        savedata_dir,
+        background_image,
+        upload_server_url,
+        upload_qq,
+    )
+}
+
+#[tauri::command]
+pub(crate) async fn upload_b50(
+    server_url: String,
+    qq: String,
+    b50: B50Result,
+) -> Result<UploadB50Result, String> {
+    upload_b50_inner(server_url, qq, b50).await
 }
 
 fn scan_inputs_inner(args: ScanArgs) -> Result<ScanResult, String> {
@@ -196,6 +215,163 @@ fn generate_b50_inner(args: GenerateArgs) -> Result<B50Result, String> {
         generated_at: generated_at(),
         cards,
     })
+}
+
+async fn upload_b50_inner(
+    server_url: String,
+    qq: String,
+    b50: B50Result,
+) -> Result<UploadB50Result, String> {
+    let endpoint = upload_endpoint(&server_url)?;
+    validate_upload_qq(&qq)?;
+
+    if b50.cards.is_empty() {
+        return Err("B50 data is empty.".to_string());
+    }
+
+    let payload = UploadB50Payload {
+        schema_version: 1,
+        game: "sdvx",
+        version: b50.version,
+        qq,
+        player: b50.player,
+        total_vf: b50.total_vf,
+        generated_at: b50.generated_at,
+        cards: b50.cards.into_iter().map(UploadB50Card::from).collect(),
+        client: UploadClientInfo {
+            app: "sdvx-b50-tool",
+            upload_at: upload_timestamp(),
+        },
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|err| format!("Failed to create HTTP client: {err}"))?;
+    let response = client
+        .post(endpoint)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| format!("Upload request failed: {err}"))?;
+    let status = response.status();
+    let body = response
+        .text()
+        .await
+        .map_err(|err| format!("Failed to read upload response: {err}"))?;
+
+    if !status.is_success() {
+        return Err(format!(
+            "Server returned HTTP {}{}",
+            status.as_u16(),
+            response_suffix(&body)
+        ));
+    }
+
+    if body.trim().is_empty() {
+        return Ok(UploadB50Result {
+            ok: true,
+            message: "Cloud upload complete.".to_string(),
+        });
+    }
+
+    match serde_json::from_str::<UploadB50Result>(&body) {
+        Ok(result) if result.ok => Ok(result),
+        Ok(result) => Err(result.message),
+        Err(_) => Ok(UploadB50Result {
+            ok: true,
+            message: "Cloud upload complete.".to_string(),
+        }),
+    }
+}
+
+fn upload_endpoint(server_url: &str) -> Result<String, String> {
+    let trimmed = server_url.trim().trim_end_matches('/');
+    if trimmed.is_empty() {
+        return Err("Server address is required.".to_string());
+    }
+
+    let normalized = if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        trimmed.to_string()
+    } else {
+        format!("http://{trimmed}")
+    };
+
+    Ok(format!("{normalized}/api/sdvx/b50"))
+}
+
+fn validate_upload_qq(qq: &str) -> Result<(), String> {
+    if (5..=12).contains(&qq.len()) && qq.chars().all(|char| char.is_ascii_digit()) {
+        Ok(())
+    } else {
+        Err("QQ number must be 5 to 12 digits.".to_string())
+    }
+}
+
+fn upload_timestamp() -> String {
+    let now = time::OffsetDateTime::now_utc();
+    now.format(&time::macros::format_description!(
+        "[year]-[month]-[day]T[hour]:[minute]:[second]Z"
+    ))
+    .unwrap_or_else(|_| "unknown time".to_string())
+}
+
+fn response_suffix(body: &str) -> String {
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        String::new()
+    } else {
+        format!(": {trimmed}")
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UploadB50Payload {
+    schema_version: u64,
+    game: &'static str,
+    version: u64,
+    qq: String,
+    player: PlayerSummary,
+    total_vf: String,
+    generated_at: String,
+    cards: Vec<UploadB50Card>,
+    client: UploadClientInfo,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UploadClientInfo {
+    app: &'static str,
+    upload_at: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UploadB50Card {
+    rank: usize,
+    mid: u32,
+    title: String,
+    difficulty_label: String,
+    level: String,
+    score: u32,
+    clear_lamp: String,
+    single_vf: String,
+}
+
+impl From<B50Card> for UploadB50Card {
+    fn from(card: B50Card) -> Self {
+        Self {
+            rank: card.rank,
+            mid: card.mid,
+            title: card.title,
+            difficulty_label: card.difficulty_label,
+            level: card.level,
+            score: card.score,
+            clear_lamp: card.clear_lamp,
+            single_vf: card.single_vf,
+        }
+    }
 }
 
 fn image_mime_type(path: &Path) -> Result<&'static str, String> {

@@ -11,7 +11,8 @@
     readImageDataUrl,
     savePng,
     saveSettings,
-    scanInputs as scanInputFolders
+    scanInputs as scanInputFolders,
+    uploadB50
   } from "./lib/api";
   import { renderBoardPng, sanitizeName } from "./lib/exportPng";
   import type { B50Result, PlayerSummary } from "./types";
@@ -19,6 +20,8 @@
   let dataDir = "";
   let savedataDir = "";
   let backgroundImage = "";
+  let uploadServerUrl = "";
+  let uploadQq = "";
   let players: PlayerSummary[] = [];
   let selectedRefid = "";
   let b50: B50Result | null = null;
@@ -34,6 +37,8 @@
       const settings = await loadSettings();
       dataDir = settings.dataDir || "";
       savedataDir = settings.savedataDir || "";
+      uploadServerUrl = settings.uploadServerUrl || "";
+      uploadQq = settings.uploadQq || "";
       await setBackgroundImage(settings.backgroundImage || "");
       if (dataDir || savedataDir || backgroundImage) {
         message = "Loaded saved settings.";
@@ -141,6 +146,10 @@
     try {
       b50 = await generateB50Data(dataDir, savedataDir, selectedRefid);
       message = `Generated ${b50.cards.length} cards for ${b50.player.name}.`;
+      const uploadMessage = await uploadB50IfConfigured(b50);
+      if (uploadMessage) {
+        message = `${message} ${uploadMessage}`;
+      }
     } catch (error) {
       message = String(error);
     } finally {
@@ -187,10 +196,47 @@
 
   async function persistSettings() {
     try {
-      await saveSettings(dataDir, savedataDir, backgroundImage);
+      await saveSettings(dataDir, savedataDir, backgroundImage, uploadServerUrl, uploadQq);
     } catch (error) {
       message = String(error);
     }
+  }
+
+  async function updateUploadServerUrl(value: string) {
+    uploadServerUrl = value.trim();
+    await persistSettings();
+  }
+
+  async function updateUploadQq(value: string) {
+    uploadQq = value.replace(/\D/g, "");
+    await persistSettings();
+  }
+
+  async function uploadB50IfConfigured(result: B50Result) {
+    if (!uploadServerUrl && !uploadQq) {
+      return "";
+    }
+    if (!uploadServerUrl || !uploadQq) {
+      return "Cloud upload skipped: server address and QQ number are both required.";
+    }
+    if (!/^\d{5,12}$/.test(uploadQq)) {
+      return "Cloud upload skipped: QQ number must be 5 to 12 digits.";
+    }
+    if (!result.cards.length) {
+      return "Cloud upload skipped: B50 data is empty.";
+    }
+
+    try {
+      const uploadResult = await uploadB50(normalizeUploadServerUrl(uploadServerUrl), uploadQq, result);
+      return uploadResult.message || "Cloud upload complete.";
+    } catch (error) {
+      return `Cloud upload failed: ${String(error)}`;
+    }
+  }
+
+  function normalizeUploadServerUrl(value: string) {
+    const trimmed = value.trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
   }
 
   async function setBackgroundImage(path: string) {
@@ -263,6 +309,8 @@
       {dataDir}
       {savedataDir}
       {backgroundImage}
+      {uploadServerUrl}
+      {uploadQq}
       {players}
       {selectedRefid}
       hasB50={Boolean(b50)}
@@ -273,6 +321,8 @@
       {chooseSavedataDir}
       {chooseBackgroundImage}
       {clearBackgroundImage}
+      {updateUploadServerUrl}
+      {updateUploadQq}
       {scanInputs}
       {generateB50}
       {exportPng}

@@ -1,12 +1,24 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppSettings, B50Result, ScanResult } from "../types";
+import type { AppSettings, B50Result, ScanResult, UploadB50Result } from "../types";
 
 export function loadSettings() {
   return invoke<AppSettings>("load_settings");
 }
 
-export function saveSettings(dataDir: string, savedataDir: string, backgroundImage: string) {
-  return invoke("save_settings", { dataDir, savedataDir, backgroundImage });
+export function saveSettings(
+  dataDir: string,
+  savedataDir: string,
+  backgroundImage: string,
+  uploadServerUrl: string,
+  uploadQq: string
+) {
+  return invoke("save_settings", {
+    dataDir,
+    savedataDir,
+    backgroundImage,
+    uploadServerUrl,
+    uploadQq
+  });
 }
 
 export function scanInputs(dataDir: string, savedataDir: string) {
@@ -30,4 +42,8 @@ export function savePng(bytes: Uint8Array, outputPath: string) {
 
 export function readImageDataUrl(imagePath: string) {
   return invoke<string>("read_image_data_url", { imagePath });
+}
+
+export function uploadB50(serverUrl: string, qq: string, b50: B50Result) {
+  return invoke<UploadB50Result>("upload_b50", { serverUrl, qq, b50 });
 }

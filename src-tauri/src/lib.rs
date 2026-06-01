@@ -89,7 +89,8 @@ pub fn run() {
             commands::read_image_data_url,
             commands::default_output_path,
             commands::load_settings,
-            commands::save_settings
+            commands::save_settings,
+            commands::upload_b50
         ])
         .run(tauri::generate_context!())
         .expect("error while running SDVX B50 Tool");

@@ -26,6 +26,8 @@ export type AppSettings = {
   dataDir: string;
   savedataDir: string;
   backgroundImage: string;
+  uploadServerUrl: string;
+  uploadQq: string;
 };
 
 export type B50Result = {
@@ -34,4 +36,9 @@ export type B50Result = {
   totalVf: string;
   generatedAt: string;
   cards: B50Card[];
+};
+
+export type UploadB50Result = {
+  ok: boolean;
+  message: string;
 };
