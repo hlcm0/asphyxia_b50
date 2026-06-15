@@ -1,14 +1,16 @@
 <script lang="ts">
+  import type { Messages } from "../lib/i18n";
   import type { PlayerSummary } from "../types";
 
   export let players: PlayerSummary[] = [];
   export let selectedRefid = "";
   export let isBusy = false;
+  export let t: Messages;
   export let selectPlayer: (refid: string) => void | Promise<void>;
 </script>
 
 <section class="panel">
-  <div class="panel-title">Players</div>
+  <div class="panel-title">{t.players}</div>
   {#if players.length}
     <div class="player-list">
       {#each players as player}
@@ -23,12 +25,12 @@
           />
           <span>
             <strong>{player.name}</strong>
-            <small>ID {player.sdvxId} / {player.scoreCount} scores</small>
+            <small>ID {player.sdvxId} / {t.scoreCount(player.scoreCount)}</small>
           </span>
         </label>
       {/each}
     </div>
   {:else}
-    <p class="muted">Scan folders to list SDVX 7 profiles.</p>
+    <p class="muted">{t.scanToListProfiles}</p>
   {/if}
 </section>

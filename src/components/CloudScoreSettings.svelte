@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Messages } from "../lib/i18n";
+
   export let dataDir = "";
   export let cloudServerUrl = "";
   export let cloudCardId = "";
@@ -6,6 +8,7 @@
   export let cloudPcbid = "";
   export let isBusy = false;
   export let cloudProgressText = "";
+  export let t: Messages;
   export let updateCloudServerUrl: (value: string) => void | Promise<void>;
   export let updateCloudCardId: (value: string) => void | Promise<void>;
   export let updateCloudPassword: (value: string) => void | Promise<void>;
@@ -14,9 +17,9 @@
 </script>
 
 <section class="panel">
-  <div class="panel-title">Cloud Scores</div>
+  <div class="panel-title">{t.cloudScores}</div>
   <label class="input-field">
-    <span class="path-label">Server URL</span>
+    <span class="path-label">{t.serverUrl}</span>
     <input
       class="text-input"
       type="url"
@@ -28,7 +31,7 @@
     />
   </label>
   <label class="input-field">
-    <span class="path-label">Card ID</span>
+    <span class="path-label">{t.cardId}</span>
     <input
       class="text-input"
       type="text"
@@ -40,12 +43,12 @@
     />
   </label>
   <label class="input-field">
-    <span class="path-label">Password</span>
+    <span class="path-label">{t.password}</span>
     <input
       class="text-input"
       type="password"
       spellcheck="false"
-      placeholder="Optional"
+      placeholder={t.optional}
       value={cloudPassword}
       disabled={isBusy}
       on:change={(event) => updateCloudPassword(event.currentTarget.value)}
@@ -69,6 +72,6 @@
     disabled={isBusy || !dataDir || !cloudServerUrl || !cloudCardId}
     on:click={generateCloudB50}
   >
-    {isBusy ? cloudProgressText || "Working..." : "Fetch Cloud B50"}
+    {isBusy ? cloudProgressText || t.working : t.fetchCloudB50}
   </button>
 </section>

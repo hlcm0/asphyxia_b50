@@ -17,6 +17,7 @@
     uploadB50
   } from "./lib/api";
   import { renderBoardPng, sanitizeName } from "./lib/exportPng";
+  import { detectLocale, getMessages } from "./lib/i18n";
   import type { B50Result, PlayerSummary } from "./types";
 
   let dataDir = "";
@@ -43,17 +44,7 @@
   let cloudProgressRequestId = "";
   let cloudProgressStage = "";
   let unlistenCloudProgress: UnlistenFn | null = null;
-
-  const cloudProgressLabels: Record<string, string> = {
-    auth_card: "Verifying password...",
-    build_b50: "Building B50...",
-    discover_services: "Discovering services...",
-    load_profile: "Loading profile...",
-    load_scores: "Loading scores...",
-    prepare: "Preparing request...",
-    query_card: "Querying card...",
-    validate_data: "Checking game data..."
-  };
+  const t = getMessages(detectLocale());
 
   onMount(() => {
     listen<{ requestId: string; stage: string }>("cloud-b50-progress", (event) => {
@@ -87,7 +78,7 @@
       cloudPcbid = settings.cloudPcbid || "";
       await setBackgroundImage(settings.backgroundImage || "");
       if (dataDir || savedataDir || backgroundImage) {
-        message = "Loaded saved settings.";
+        message = t.loadedSettings;
       }
     } catch (error) {
       message = String(error);
@@ -98,7 +89,7 @@
     const selected = await open({
       directory: true,
       multiple: false,
-      title: "Select contents/data"
+      title: t.selectContentsData
     });
     if (typeof selected === "string") {
       dataDir = selected;
@@ -111,7 +102,7 @@
     const selected = await open({
       directory: true,
       multiple: false,
-      title: "Select asphyxia/savedata"
+      title: t.selectSavedata
     });
     if (typeof selected === "string") {
       savedataDir = selected;
@@ -124,10 +115,10 @@
     const selected = await open({
       directory: false,
       multiple: false,
-      title: "Select B50 background image",
+      title: t.selectBackgroundImageDialog,
       filters: [
         {
-          name: "Image",
+          name: t.imageFilter,
           extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif"]
         }
       ]
@@ -161,7 +152,7 @@
 
   async function scanInputs() {
     if (!dataDir || !savedataDir) {
-      message = "Select both folders first.";
+      message = t.selectBothFolders;
       return;
     }
 
@@ -172,9 +163,7 @@
       const result = await scanInputFolders(dataDir, savedataDir);
       players = result.players;
       selectedRefid = players[0]?.refid ?? "";
-      message = players.length
-        ? `Found ${players.length} SDVX 7 player profile${players.length > 1 ? "s" : ""}.`
-        : "No SDVX 7 player with score data was found.";
+      message = players.length ? t.scannedPlayers(players.length) : t.noPlayers;
       await persistSettings();
       if (selectedRefid) {
         await generateB50();
@@ -190,7 +179,7 @@
 
   async function generateB50() {
     if (!selectedRefid) {
-      message = "Select a player first.";
+      message = t.selectPlayer;
       return;
     }
 
@@ -203,7 +192,7 @@
       const result = await generateB50Data(dataDir, savedataDir, refid);
       if (requestId === generateRequestId) {
         b50 = result;
-        message = `Generated ${result.cards.length} cards for ${result.player.name}.`;
+        message = t.generatedCards(result.cards.length, result.player.name);
       }
     } catch (error) {
       if (requestId === generateRequestId) {
@@ -218,11 +207,11 @@
 
   async function generateCloudB50() {
     if (!dataDir) {
-      message = "Select contents/data first.";
+      message = t.dataRequired;
       return;
     }
     if (!cloudServerUrl || !cloudCardId) {
-      message = "Cloud server URL and card ID are required.";
+      message = t.serverUrlAndCardRequired;
       return;
     }
 
@@ -248,7 +237,7 @@
       if (requestId === generateRequestId) {
         b50 = result;
         cloudProgressStage = "";
-        message = `Generated ${result.cards.length} cloud cards for ${result.player.name}.`;
+        message = t.generatedCloudCards(result.cards.length, result.player.name);
       }
     } catch (error) {
       if (requestId === generateRequestId) {
@@ -264,17 +253,17 @@
   }
 
   function cloudProgressText(stage: string) {
-    return cloudProgressLabels[stage] ?? "Working...";
+    return t.cloudProgress[stage as keyof typeof t.cloudProgress] ?? t.working;
   }
 
   async function exportPng() {
     if (!b50) {
-      message = "Generate a B50 preview first.";
+      message = t.selectPlayer;
       return;
     }
     const board = document.getElementById("export-board");
     if (!board) {
-      message = "Export board is not available.";
+      message = t.exportBoardMissing;
       return;
     }
 
@@ -283,9 +272,9 @@
       .slice(0, 10)}.png`;
     const defaultPath = await defaultOutputPath(defaultName);
     const outputPath = await save({
-      title: "Save B50 PNG",
+      title: t.saveB50Png,
       defaultPath,
-      filters: [{ name: "PNG Image", extensions: ["png"] }]
+      filters: [{ name: t.exportPng, extensions: ["png"] }]
     });
     if (!outputPath) {
       return;
@@ -296,9 +285,9 @@
     try {
       const bytes = await renderBoardPng(board);
       await savePng(bytes, outputPath);
-      message = `Saved ${outputPath}.`;
+      message = t.saved(outputPath);
     } catch (error) {
-      message = `Export failed: ${String(error)}`;
+      message = `${t.exportFailed} ${String(error)}`;
     } finally {
       isExporting = false;
     }
@@ -361,7 +350,7 @@
 
   async function uploadB50ToCloud() {
     if (!b50) {
-      message = "Generate a B50 preview first.";
+      message = t.selectPlayer;
       return;
     }
 
@@ -376,23 +365,23 @@
 
   async function uploadB50IfConfigured(result: B50Result) {
     if (!uploadServerUrl && !uploadQq) {
-      return "Cloud upload skipped: server address and QQ number are both required.";
+      return t.cloudUploadMissing;
     }
     if (!uploadServerUrl || !uploadQq) {
-      return "Cloud upload skipped: server address and QQ number are both required.";
+      return t.cloudUploadMissing;
     }
     if (!/^\d{5,12}$/.test(uploadQq)) {
-      return "Cloud upload skipped: QQ number must be 5 to 12 digits.";
+      return t.cloudUploadQqInvalid;
     }
     if (!result.cards.length) {
-      return "Cloud upload skipped: B50 data is empty.";
+      return t.cloudUploadEmpty;
     }
 
     try {
       const uploadResult = await uploadB50(normalizeUploadServerUrl(uploadServerUrl), uploadQq, result);
-      return uploadResult.message || "Cloud upload complete.";
+      return uploadResult.message || t.cloudUploadComplete;
     } catch (error) {
-      return `Cloud upload failed: ${String(error)}`;
+      return `${t.cloudUploadFailed} ${String(error)}`;
     }
   }
 
@@ -486,6 +475,7 @@
       {isExporting}
       {isUploading}
       cloudProgressText={cloudProgressStage ? cloudProgressText(cloudProgressStage) : ""}
+      {t}
       {chooseDataDir}
       {chooseSavedataDir}
       {chooseBackgroundImage}
@@ -508,7 +498,7 @@
       {#if b50}
         <B50Preview {b50} {backgroundImageUrl} {exportColumns} />
       {:else}
-        <EmptyState />
+        <EmptyState {t} />
       {/if}
     </section>
   </div>

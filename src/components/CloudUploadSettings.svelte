@@ -1,15 +1,18 @@
 <script lang="ts">
+  import type { Messages } from "../lib/i18n";
+
   export let uploadServerUrl = "";
   export let uploadQq = "";
   export let isBusy = false;
+  export let t: Messages;
   export let updateUploadServerUrl: (value: string) => void | Promise<void>;
   export let updateUploadQq: (value: string) => void | Promise<void>;
 </script>
 
 <section class="panel">
-  <div class="panel-title">Cloud Upload</div>
+  <div class="panel-title">{t.b50Upload}</div>
   <label class="input-field">
-    <span class="path-label">Server address</span>
+    <span class="path-label">{t.serverAddress}</span>
     <input
       class="text-input"
       type="url"
@@ -21,7 +24,7 @@
     />
   </label>
   <label class="input-field">
-    <span class="path-label">QQ number</span>
+    <span class="path-label">{t.qqNumber}</span>
     <input
       class="text-input"
       type="text"

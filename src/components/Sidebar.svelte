@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Messages } from "../lib/i18n";
   import type { PlayerSummary } from "../types";
   import BackgroundPicker from "./BackgroundPicker.svelte";
   import CloudScoreSettings from "./CloudScoreSettings.svelte";
@@ -25,6 +26,7 @@
   export let isExporting = false;
   export let isUploading = false;
   export let cloudProgressText = "";
+  export let t: Messages;
   export let chooseDataDir: () => void | Promise<void>;
   export let chooseSavedataDir: () => void | Promise<void>;
   export let chooseBackgroundImage: () => void | Promise<void>;
@@ -45,7 +47,7 @@
 
 <aside class="sidebar">
   <section class="panel">
-    <div class="panel-title">Score Source</div>
+    <div class="panel-title">{t.scoreSource}</div>
     <div class="segmented">
       <button
         class:active={scoreSource === "local"}
@@ -53,7 +55,7 @@
         disabled={isBusy}
         on:click={() => updateScoreSource("local")}
       >
-        Local Savedata
+        {t.localSavedata}
       </button>
       <button
         class:active={scoreSource === "cloud"}
@@ -61,7 +63,7 @@
         disabled={isBusy}
         on:click={() => updateScoreSource("cloud")}
       >
-        Cloud Server
+        {t.cloudServer}
       </button>
     </div>
   </section>
@@ -71,13 +73,14 @@
     {savedataDir}
     {scoreSource}
     {isBusy}
+    {t}
     {chooseDataDir}
     {chooseSavedataDir}
     {scanInputs}
   />
 
   {#if scoreSource === "local"}
-    <PlayerList {players} {selectedRefid} {isBusy} {selectPlayer} />
+    <PlayerList {players} {selectedRefid} {isBusy} {t} {selectPlayer} />
   {:else}
     <CloudScoreSettings
       {dataDir}
@@ -87,6 +90,7 @@
       {cloudPcbid}
       {isBusy}
       {cloudProgressText}
+      {t}
       {updateCloudServerUrl}
       {updateCloudCardId}
       {updateCloudPassword}
@@ -95,14 +99,15 @@
     />
   {/if}
 
-  <ExportPanel {hasB50} {isExporting} {isUploading} {message} {exportPng} {uploadB50ToCloud} />
+  <ExportPanel {hasB50} {isExporting} {isUploading} {message} {t} {exportPng} {uploadB50ToCloud} />
 
-  <BackgroundPicker {backgroundImage} {chooseBackgroundImage} {clearBackgroundImage} />
+  <BackgroundPicker {backgroundImage} {t} {chooseBackgroundImage} {clearBackgroundImage} />
 
   <CloudUploadSettings
     {uploadServerUrl}
     {uploadQq}
     {isBusy}
+    {t}
     {updateUploadServerUrl}
     {updateUploadQq}
   />
