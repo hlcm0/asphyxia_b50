@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { open, save } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import B50Preview from "./components/B50Preview.svelte";
@@ -7,6 +8,7 @@
   import {
     defaultOutputPath,
     generateB50 as generateB50Data,
+    generateCloudB50 as generateCloudB50Data,
     loadSettings,
     readImageDataUrl,
     savePng,
@@ -22,6 +24,11 @@
   let backgroundImage = "";
   let uploadServerUrl = "";
   let uploadQq = "";
+  let scoreSource = "local";
+  let cloudServerUrl = "";
+  let cloudCardId = "";
+  let cloudPassword = "";
+  let cloudPcbid = "";
   let players: PlayerSummary[] = [];
   let selectedRefid = "";
   let b50: B50Result | null = null;
@@ -33,14 +40,51 @@
   let exportColumns = 5;
   let backgroundLoadId = 0;
   let generateRequestId = 0;
+  let cloudProgressRequestId = "";
+  let cloudProgressStage = "";
+  let unlistenCloudProgress: UnlistenFn | null = null;
 
-  onMount(async () => {
+  const cloudProgressLabels: Record<string, string> = {
+    auth_card: "Verifying password...",
+    build_b50: "Building B50...",
+    discover_services: "Discovering services...",
+    load_profile: "Loading profile...",
+    load_scores: "Loading scores...",
+    prepare: "Preparing request...",
+    query_card: "Querying card...",
+    validate_data: "Checking game data..."
+  };
+
+  onMount(() => {
+    listen<{ requestId: string; stage: string }>("cloud-b50-progress", (event) => {
+      if (event.payload.requestId === cloudProgressRequestId) {
+        cloudProgressStage = event.payload.stage;
+        message = cloudProgressText(event.payload.stage);
+      }
+    }).then((unlisten) => {
+      unlistenCloudProgress = unlisten;
+    });
+
+    loadInitialSettings();
+
+    return () => {
+      unlistenCloudProgress?.();
+      unlistenCloudProgress = null;
+    };
+  });
+
+  async function loadInitialSettings() {
     try {
       const settings = await loadSettings();
       dataDir = settings.dataDir || "";
       savedataDir = settings.savedataDir || "";
       uploadServerUrl = settings.uploadServerUrl || "";
       uploadQq = settings.uploadQq || "";
+      scoreSource = settings.scoreSource === "cloud" ? "cloud" : "local";
+      cloudServerUrl = settings.cloudServerUrl || "";
+      cloudCardId = settings.cloudCardId || "";
+      cloudPassword = settings.cloudPassword || "";
+      cloudPcbid = settings.cloudPcbid || "";
       await setBackgroundImage(settings.backgroundImage || "");
       if (dataDir || savedataDir || backgroundImage) {
         message = "Loaded saved settings.";
@@ -48,7 +92,7 @@
     } catch (error) {
       message = String(error);
     }
-  });
+  }
 
   async function chooseDataDir() {
     const selected = await open({
@@ -111,6 +155,7 @@
     players = [];
     selectedRefid = "";
     b50 = null;
+    cloudProgressStage = "";
     message = "";
   }
 
@@ -171,6 +216,57 @@
     }
   }
 
+  async function generateCloudB50() {
+    if (!dataDir) {
+      message = "Select contents/data first.";
+      return;
+    }
+    if (!cloudServerUrl || !cloudCardId) {
+      message = "Cloud server URL and card ID are required.";
+      return;
+    }
+
+    const requestId = ++generateRequestId;
+    const cloudRequestId = `cloud-${Date.now()}-${requestId}`;
+    cloudProgressRequestId = cloudRequestId;
+    cloudProgressStage = "validate_data";
+    isBusy = true;
+    players = [];
+    selectedRefid = "";
+    b50 = null;
+    message = cloudProgressText(cloudProgressStage);
+    try {
+      await persistSettings();
+      const result = await generateCloudB50Data(
+        dataDir,
+        normalizeUploadServerUrl(cloudServerUrl),
+        cloudCardId,
+        cloudPassword,
+        cloudPcbid,
+        cloudRequestId
+      );
+      if (requestId === generateRequestId) {
+        b50 = result;
+        cloudProgressStage = "";
+        message = `Generated ${result.cards.length} cloud cards for ${result.player.name}.`;
+      }
+    } catch (error) {
+      if (requestId === generateRequestId) {
+        cloudProgressStage = "";
+        message = String(error);
+      }
+    } finally {
+      if (requestId === generateRequestId) {
+        isBusy = false;
+        cloudProgressRequestId = "";
+      }
+    }
+  }
+
+  function cloudProgressText(stage: string) {
+    return cloudProgressLabels[stage] ?? "Working...";
+  }
+
   async function exportPng() {
     if (!b50) {
       message = "Generate a B50 preview first.";
@@ -210,10 +306,27 @@
 
   async function persistSettings() {
     try {
-      await saveSettings(dataDir, savedataDir, backgroundImage, uploadServerUrl, uploadQq);
+      await saveSettings(
+        dataDir,
+        savedataDir,
+        backgroundImage,
+        uploadServerUrl,
+        uploadQq,
+        scoreSource,
+        cloudServerUrl,
+        cloudCardId,
+        cloudPassword,
+        cloudPcbid
+      );
     } catch (error) {
       message = String(error);
     }
+  }
+
+  async function updateScoreSource(value: string) {
+    scoreSource = value === "cloud" ? "cloud" : "local";
+    resetResults();
+    await persistSettings();
   }
 
   async function updateUploadServerUrl(value: string) {
@@ -223,6 +336,26 @@
 
   async function updateUploadQq(value: string) {
     uploadQq = value.replace(/\D/g, "");
+    await persistSettings();
+  }
+
+  async function updateCloudServerUrl(value: string) {
+    cloudServerUrl = value.trim();
+    await persistSettings();
+  }
+
+  async function updateCloudCardId(value: string) {
+    cloudCardId = value.trim();
+    await persistSettings();
+  }
+
+  async function updateCloudPassword(value: string) {
+    cloudPassword = value;
+    await persistSettings();
+  }
+
+  async function updateCloudPcbid(value: string) {
+    cloudPcbid = value.trim();
     await persistSettings();
   }
 
@@ -340,6 +473,11 @@
       {backgroundImage}
       {uploadServerUrl}
       {uploadQq}
+      {scoreSource}
+      {cloudServerUrl}
+      {cloudCardId}
+      {cloudPassword}
+      {cloudPcbid}
       {players}
       {selectedRefid}
       hasB50={Boolean(b50)}
@@ -347,13 +485,20 @@
       {isBusy}
       {isExporting}
       {isUploading}
+      cloudProgressText={cloudProgressStage ? cloudProgressText(cloudProgressStage) : ""}
       {chooseDataDir}
       {chooseSavedataDir}
       {chooseBackgroundImage}
       {clearBackgroundImage}
       {updateUploadServerUrl}
       {updateUploadQq}
+      {updateScoreSource}
+      {updateCloudServerUrl}
+      {updateCloudCardId}
+      {updateCloudPassword}
+      {updateCloudPcbid}
       {scanInputs}
+      {generateCloudB50}
       {exportPng}
       {uploadB50ToCloud}
       {selectPlayer}

@@ -1,4 +1,5 @@
 mod commands;
+mod eamuse;
 mod jacket;
 mod models;
 mod music_db;
@@ -85,6 +86,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::scan_inputs,
             commands::generate_b50,
+            commands::generate_cloud_b50,
             commands::save_png,
             commands::read_image_data_url,
             commands::default_output_path,

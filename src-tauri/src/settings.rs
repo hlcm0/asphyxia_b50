@@ -35,6 +35,11 @@ pub(crate) fn save_settings(
     background_image: String,
     upload_server_url: String,
     upload_qq: String,
+    score_source: String,
+    cloud_server_url: String,
+    cloud_card_id: String,
+    cloud_password: String,
+    cloud_pcbid: String,
 ) -> Result<(), String> {
     let path = settings_path()?;
     let settings = AppSettings {
@@ -43,6 +48,11 @@ pub(crate) fn save_settings(
         background_image,
         upload_server_url,
         upload_qq,
+        score_source,
+        cloud_server_url,
+        cloud_card_id,
+        cloud_password,
+        cloud_pcbid,
     };
     let content = serde_json::to_string_pretty(&settings)
         .map_err(|err| format!("Failed to serialize settings: {err}"))?;
@@ -93,6 +103,11 @@ fn discover_default_paths(base_dir: &Path) -> AppSettings {
         background_image: String::new(),
         upload_server_url: String::new(),
         upload_qq: String::new(),
+        score_source: String::new(),
+        cloud_server_url: String::new(),
+        cloud_card_id: String::new(),
+        cloud_password: String::new(),
+        cloud_pcbid: String::new(),
     }
 }
 

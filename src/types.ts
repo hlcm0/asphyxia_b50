@@ -28,6 +28,11 @@ export type AppSettings = {
   backgroundImage: string;
   uploadServerUrl: string;
   uploadQq: string;
+  scoreSource: string;
+  cloudServerUrl: string;
+  cloudCardId: string;
+  cloudPassword: string;
+  cloudPcbid: string;
 };
 
 export type B50Result = {

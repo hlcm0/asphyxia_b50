@@ -129,6 +129,45 @@
   color: var(--sidebar-text-muted);
 }
 
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--sidebar-input-bg);
+  border: 1px solid var(--sidebar-input-border);
+  border-radius: var(--radius-default);
+}
+
+.segmented button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: calc(var(--radius-default) - 2px);
+  color: var(--sidebar-text-secondary);
+  background: transparent;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.segmented button:hover:not(:disabled) {
+  color: var(--sidebar-text-primary);
+}
+
+.segmented button.active {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.segmented button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .player-list {
   display: flex;
   flex-direction: column;

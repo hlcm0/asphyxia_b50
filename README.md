@@ -1,10 +1,11 @@
 # SDVX B50 Tool
 
-Standalone SDVX 7 B50 PNG exporter for Asphyxia savedata.
+Standalone SDVX 7 B50 PNG exporter for Asphyxia savedata and compatible private servers.
 
 ## Features
 
 - Reads SDVX 7 records from `sdvx@asphyxia.db`.
+- Can fetch SDVX 7 scores directly from compatible Eamuse/XRPC private servers.
 - Scans `contents/data/others/music_db.xml` and `contents/data/music/**/jk_*.png`.
 - Lists SDVX 7 player profiles and deduplicates profiles by `__refid`.
 - Aggregates duplicate records for the same song and difficulty before ranking.
@@ -16,9 +17,10 @@ Standalone SDVX 7 B50 PNG exporter for Asphyxia savedata.
 ## Usage
 
 1. Select the game data folder, usually `contents/data`.
-2. Select the Asphyxia savedata folder, usually `asphyxia/savedata`.
-3. Optionally select a background image.
-4. Scan players, select a player, generate the B50 preview, then export PNG.
+2. Choose a score source.
+3. For local savedata, select the Asphyxia savedata folder, scan players, then select a player.
+4. For cloud server scores, enter the server URL, card ID, optional password, and optional PCBID, then fetch B50.
+5. Optionally select a background image, preview the B50, then export PNG.
 
 The app stores selected paths in `sdvx-b50-tool.settings.json` next to the executable or `.app` bundle. On startup, if saved paths are empty, it also tries to auto-detect:
 
@@ -100,6 +102,7 @@ app data path is unavailable.
 - Game data folder: `contents/data`
 - Savedata folder: `asphyxia/savedata`
 - Database file: `sdvx@asphyxia.db`
+- Cloud score source: SDVX 7 Eamuse/XRPC private servers compatible with `game.sv7_load_m`
 - Version: SDVX 7 only
 
 The app does not calculate or export SDVX 6 B50.

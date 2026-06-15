@@ -10,14 +10,24 @@ export function saveSettings(
   savedataDir: string,
   backgroundImage: string,
   uploadServerUrl: string,
-  uploadQq: string
+  uploadQq: string,
+  scoreSource: string,
+  cloudServerUrl: string,
+  cloudCardId: string,
+  cloudPassword: string,
+  cloudPcbid: string
 ) {
   return invoke("save_settings", {
     dataDir,
     savedataDir,
     backgroundImage,
     uploadServerUrl,
-    uploadQq
+    uploadQq,
+    scoreSource,
+    cloudServerUrl,
+    cloudCardId,
+    cloudPassword,
+    cloudPcbid
   });
 }
 
@@ -27,6 +37,17 @@ export function scanInputs(dataDir: string, savedataDir: string) {
 
 export function generateB50(dataDir: string, savedataDir: string, refid: string) {
   return invoke<B50Result>("generate_b50", { dataDir, savedataDir, refid });
+}
+
+export function generateCloudB50(
+  dataDir: string,
+  serverUrl: string,
+  cardId: string,
+  password: string,
+  pcbid: string,
+  requestId: string
+) {
+  return invoke<B50Result>("generate_cloud_b50", { dataDir, serverUrl, cardId, password, pcbid, requestId });
 }
 
 export function defaultOutputPath(fileName: string) {

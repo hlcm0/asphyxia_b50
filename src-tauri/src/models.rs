@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 pub(crate) const SDVX_DB_FILE: &str = "sdvx@asphyxia.db";
 pub(crate) const SDVX_VERSION: u64 = 7;
+pub(crate) const CLOUD_PROGRESS_EVENT: &str = "cloud-b50-progress";
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -31,6 +32,16 @@ pub(crate) struct AppSettings {
     pub(crate) upload_server_url: String,
     #[serde(default)]
     pub(crate) upload_qq: String,
+    #[serde(default)]
+    pub(crate) score_source: String,
+    #[serde(default)]
+    pub(crate) cloud_server_url: String,
+    #[serde(default)]
+    pub(crate) cloud_card_id: String,
+    #[serde(default)]
+    pub(crate) cloud_password: String,
+    #[serde(default)]
+    pub(crate) cloud_pcbid: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -62,6 +73,13 @@ pub(crate) struct B50Card {
 pub(crate) struct UploadB50Result {
     pub(crate) ok: bool,
     pub(crate) message: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CloudProgressEvent {
+    pub(crate) request_id: String,
+    pub(crate) stage: String,
 }
 
 #[derive(Debug, Clone)]
@@ -105,4 +123,14 @@ pub(crate) struct GenerateArgs {
     pub(crate) data_dir: String,
     pub(crate) savedata_dir: String,
     pub(crate) refid: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct GenerateCloudArgs {
+    pub(crate) data_dir: String,
+    pub(crate) server_url: String,
+    pub(crate) card_id: String,
+    pub(crate) password: String,
+    pub(crate) pcbid: String,
+    pub(crate) request_id: String,
 }

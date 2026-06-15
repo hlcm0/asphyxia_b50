@@ -1,7 +1,9 @@
+use crate::eamuse::{fetch_cloud_scores, CloudB50Input, CloudProgressReporter};
 use crate::jacket::{placeholder_data_url, scan_jackets, select_jacket_data_url};
 use crate::models::{
-    AppSettings, B50Card, B50Result, GenerateArgs, PlayerSummary, ScanArgs, ScanResult,
-    UploadB50Result, SDVX_VERSION,
+    AppSettings, B50Card, B50Result, CloudProgressEvent, GenerateArgs, GenerateCloudArgs,
+    MusicRecord, PlayerSummary, ScanArgs, ScanResult, UploadB50Result, CLOUD_PROGRESS_EVENT,
+    SDVX_VERSION,
 };
 use crate::music_db::{parse_music_db, validate_data_dir};
 use crate::savedata::{
@@ -16,6 +18,7 @@ use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub(crate) fn scan_inputs(data_dir: String, savedata_dir: String) -> Result<ScanResult, String> {
@@ -36,6 +39,27 @@ pub(crate) fn generate_b50(
         savedata_dir,
         refid,
     })
+}
+
+#[tauri::command]
+pub(crate) async fn generate_cloud_b50(
+    app: AppHandle,
+    data_dir: String,
+    server_url: String,
+    card_id: String,
+    password: String,
+    pcbid: String,
+    request_id: String,
+) -> Result<B50Result, String> {
+    generate_cloud_b50_inner(app, GenerateCloudArgs {
+        data_dir,
+        server_url,
+        card_id,
+        password,
+        pcbid,
+        request_id,
+    })
+    .await
 }
 
 #[tauri::command]
@@ -86,6 +110,11 @@ pub(crate) fn save_settings(
     background_image: String,
     upload_server_url: String,
     upload_qq: String,
+    score_source: String,
+    cloud_server_url: String,
+    cloud_card_id: String,
+    cloud_password: String,
+    cloud_pcbid: String,
 ) -> Result<(), String> {
     settings::save_settings(
         data_dir,
@@ -93,6 +122,11 @@ pub(crate) fn save_settings(
         background_image,
         upload_server_url,
         upload_qq,
+        score_source,
+        cloud_server_url,
+        cloud_card_id,
+        cloud_password,
+        cloud_pcbid,
     )
 }
 
@@ -156,11 +190,51 @@ fn generate_b50_inner(args: GenerateArgs) -> Result<B50Result, String> {
         sdvx_id: profile.sdvx_id,
     };
 
+    let records = extract_music_records(&docs, &args.refid);
+    build_b50_result(&data_dir, player, records)
+}
+
+async fn generate_cloud_b50_inner(app: AppHandle, args: GenerateCloudArgs) -> Result<B50Result, String> {
+    let data_dir = PathBuf::from(&args.data_dir);
+    emit_cloud_progress(&app, &args.request_id, "validate_data");
+    validate_data_dir(&args.data_dir)?;
+    let progress_app = app.clone();
+    let progress_request_id = args.request_id.clone();
+    let result = fetch_cloud_scores(CloudB50Input {
+        server_url: args.server_url,
+        card_id: args.card_id,
+        password: args.password,
+        pcbid: args.pcbid,
+        progress: Some(CloudProgressReporter::new(move |stage| {
+            emit_cloud_progress(&progress_app, &progress_request_id, stage);
+        })),
+    })
+    .await?;
+
+    emit_cloud_progress(&app, &args.request_id, "build_b50");
+    build_b50_result(&data_dir, result.player, result.records)
+}
+
+fn emit_cloud_progress(app: &AppHandle, request_id: &str, stage: &str) {
+    let _ = app.emit(
+        CLOUD_PROGRESS_EVENT,
+        CloudProgressEvent {
+            request_id: request_id.to_string(),
+            stage: stage.to_string(),
+        },
+    );
+}
+
+fn build_b50_result(
+    data_dir: &Path,
+    player: PlayerSummary,
+    records: Vec<MusicRecord>,
+) -> Result<B50Result, String> {
     let music_db = parse_music_db(&data_dir.join("others").join("music_db.xml"))?;
     let jackets = scan_jackets(&data_dir.join("music"))?;
     let placeholder = placeholder_data_url();
 
-    let mut records = aggregate_music_records(extract_music_records(&docs, &args.refid), &music_db);
+    let mut records = aggregate_music_records(records, &music_db);
     records.retain(|record| music_db.contains_key(&record.mid));
     records.sort_by(|a, b| {
         b.volforce
