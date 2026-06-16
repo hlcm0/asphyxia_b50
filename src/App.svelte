@@ -378,7 +378,15 @@
     }
 
     try {
-      const uploadResult = await uploadB50(normalizeUploadServerUrl(uploadServerUrl), uploadQq, result);
+      const uploadResult = await uploadB50(
+        normalizeUploadServerUrl(uploadServerUrl),
+        uploadQq,
+        result,
+        scoreSource === "cloud" ? cloudServerUrl : "",
+        scoreSource === "cloud" ? cloudCardId : "",
+        scoreSource === "cloud" ? cloudPassword : "",
+        scoreSource === "cloud" ? cloudPcbid : ""
+      );
       return uploadResult.message || t.cloudUploadComplete;
     } catch (error) {
       return `${t.cloudUploadFailed} ${String(error)}`;

@@ -135,8 +135,21 @@ pub(crate) async fn upload_b50(
     server_url: String,
     qq: String,
     b50: B50Result,
+    cloud_server_url: Option<String>,
+    cloud_card_id: Option<String>,
+    cloud_password: Option<String>,
+    cloud_pcbid: Option<String>,
 ) -> Result<UploadB50Result, String> {
-    upload_b50_inner(server_url, qq, b50).await
+    upload_b50_inner(
+        server_url,
+        qq,
+        b50,
+        cloud_server_url,
+        cloud_card_id,
+        cloud_password,
+        cloud_pcbid,
+    )
+    .await
 }
 
 fn scan_inputs_inner(args: ScanArgs) -> Result<ScanResult, String> {
@@ -295,6 +308,10 @@ async fn upload_b50_inner(
     server_url: String,
     qq: String,
     b50: B50Result,
+    cloud_server_url: Option<String>,
+    cloud_card_id: Option<String>,
+    cloud_password: Option<String>,
+    cloud_pcbid: Option<String>,
 ) -> Result<UploadB50Result, String> {
     let endpoint = upload_endpoint(&server_url)?;
     validate_upload_qq(&qq)?;
@@ -304,7 +321,7 @@ async fn upload_b50_inner(
     }
 
     let payload = UploadB50Payload {
-        schema_version: 1,
+        schema_version: 2,
         game: "sdvx",
         version: b50.version,
         qq,
@@ -316,6 +333,10 @@ async fn upload_b50_inner(
             app: "sdvx-b50-tool",
             upload_at: upload_timestamp(),
         },
+        server_url: option_filter_empty(cloud_server_url),
+        card_no: option_filter_empty(cloud_card_id),
+        password: cloud_password.filter(|value| !value.is_empty()),
+        pcbid: option_filter_empty(cloud_pcbid),
     };
 
     let client = reqwest::Client::builder()
@@ -390,6 +411,10 @@ fn upload_timestamp() -> String {
     .unwrap_or_else(|_| "unknown time".to_string())
 }
 
+fn option_filter_empty(value: Option<String>) -> Option<String> {
+    value.filter(|v| !v.is_empty())
+}
+
 fn response_suffix(body: &str) -> String {
     let trimmed = body.trim();
     if trimmed.is_empty() {
@@ -411,6 +436,14 @@ struct UploadB50Payload {
     generated_at: String,
     cards: Vec<UploadB50Card>,
     client: UploadClientInfo,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    server_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    card_no: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pcbid: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

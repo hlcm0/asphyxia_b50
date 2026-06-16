@@ -65,6 +65,22 @@ export function readImageDataUrl(imagePath: string) {
   return invoke<string>("read_image_data_url", { imagePath });
 }
 
-export function uploadB50(serverUrl: string, qq: string, b50: B50Result) {
-  return invoke<UploadB50Result>("upload_b50", { serverUrl, qq, b50 });
+export function uploadB50(
+  serverUrl: string,
+  qq: string,
+  b50: B50Result,
+  cloudServerUrl: string,
+  cloudCardId: string,
+  cloudPassword: string,
+  cloudPcbid: string
+) {
+  return invoke<UploadB50Result>("upload_b50", {
+    serverUrl,
+    qq,
+    b50,
+    cloudServerUrl: cloudServerUrl || null,
+    cloudCardId: cloudCardId || null,
+    cloudPassword: cloudPassword || null,
+    cloudPcbid: cloudPcbid || null
+  });
 }
