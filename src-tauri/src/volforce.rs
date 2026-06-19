@@ -13,11 +13,7 @@ pub(crate) fn calculate_volforce(record: &MusicRecord, music_db: &HashMap<u32, M
         return record.volforce;
     };
 
-    let level = if raw_level > 20 {
-        raw_level as f32 / 10.0
-    } else {
-        raw_level as f32
-    };
+    let level = raw_level as f32 / 10.0;
     let score = record.score as f32 / 10_000_000.0;
     let vf = level * score * grade_factor(record.grade) * clear_factor(record.clear) * 20.0;
     vf.floor() as u32
@@ -64,10 +60,6 @@ pub(crate) fn clear_lamp(clear: u8) -> String {
 }
 
 pub(crate) fn format_level(level: u32) -> String {
-    if level <= 20 {
-        return level.to_string();
-    }
-
     if level % 10 == 0 {
         (level / 10).to_string()
     } else {
