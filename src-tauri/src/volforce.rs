@@ -38,6 +38,7 @@ pub(crate) fn difficulty_label(chart_type: u8, inf_ver: Option<u8>) -> String {
             4 => "HVN".to_string(),
             5 => "VVD".to_string(),
             6 => "XCD".to_string(),
+            7 => "NBL".to_string(),
             _ => "INF".to_string(),
         },
         4 => "MXM".to_string(),
@@ -104,5 +105,15 @@ fn clear_factor(clear: u8) -> f32 {
         5 => 1.06,
         6 => 1.10,
         _ => 0.0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::difficulty_label;
+
+    #[test]
+    fn labels_nbl_special_charts() {
+        assert_eq!(difficulty_label(3, Some(7)), "NBL");
     }
 }
