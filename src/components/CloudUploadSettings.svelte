@@ -28,13 +28,12 @@
     <input
       class="text-input"
       type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
       spellcheck="false"
-      placeholder="123456789"
+      placeholder="123456789, 987654321"
       value={uploadQq}
       disabled={isBusy}
       on:change={(event) => updateUploadQq(event.currentTarget.value)}
     />
+    <span class="muted">{t.qqNumberHint}</span>
   </label>
 </section>

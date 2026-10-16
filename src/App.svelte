@@ -324,8 +324,12 @@
   }
 
   async function updateUploadQq(value: string) {
-    uploadQq = value.replace(/\D/g, "");
+    uploadQq = parseUploadQqs(value).join(", ");
     await persistSettings();
+  }
+
+  function parseUploadQqs(value: string) {
+    return [...new Set(value.split(/\D+/).filter(Boolean))];
   }
 
   async function updateCloudServerUrl(value: string) {
@@ -364,33 +368,42 @@
   }
 
   async function uploadB50IfConfigured(result: B50Result) {
-    if (!uploadServerUrl && !uploadQq) {
+    const qqs = parseUploadQqs(uploadQq);
+    if (!uploadServerUrl || !qqs.length) {
       return t.cloudUploadMissing;
     }
-    if (!uploadServerUrl || !uploadQq) {
-      return t.cloudUploadMissing;
-    }
-    if (!/^\d{5,12}$/.test(uploadQq)) {
-      return t.cloudUploadQqInvalid;
+    const invalidQq = qqs.find((qq) => !/^\d{5,12}$/.test(qq));
+    if (invalidQq) {
+      return t.cloudUploadQqInvalid(invalidQq);
     }
     if (!result.cards.length) {
       return t.cloudUploadEmpty;
     }
 
-    try {
-      const uploadResult = await uploadB50(
-        normalizeUploadServerUrl(uploadServerUrl),
-        uploadQq,
-        result,
-        scoreSource === "cloud" ? cloudServerUrl : "",
-        scoreSource === "cloud" ? cloudCardId : "",
-        scoreSource === "cloud" ? cloudPassword : "",
-        scoreSource === "cloud" ? cloudPcbid : ""
-      );
-      return uploadResult.message || t.cloudUploadComplete;
-    } catch (error) {
-      return `${t.cloudUploadFailed} ${String(error)}`;
+    const serverUrl = normalizeUploadServerUrl(uploadServerUrl);
+    const failures: string[] = [];
+    let lastMessage = "";
+    for (const qq of qqs) {
+      try {
+        const uploadResult = await uploadB50(
+          serverUrl,
+          qq,
+          result,
+          scoreSource === "cloud" ? cloudServerUrl : "",
+          scoreSource === "cloud" ? cloudCardId : "",
+          scoreSource === "cloud" ? cloudPassword : "",
+          scoreSource === "cloud" ? cloudPcbid : ""
+        );
+        lastMessage = uploadResult.message;
+      } catch (error) {
+        failures.push(qqs.length === 1 ? String(error) : t.cloudUploadQqFailed(qq, String(error)));
+      }
     }
+
+    if (qqs.length === 1) {
+      return failures.length ? `${t.cloudUploadFailed} ${failures[0]}` : lastMessage || t.cloudUploadComplete;
+    }
+    return [t.cloudUploadPartial(qqs.length - failures.length, qqs.length), ...failures].join(" ");
   }
 
   function normalizeUploadServerUrl(value: string) {
